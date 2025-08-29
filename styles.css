@@ -140,12 +140,22 @@ html, body {
 }
 
 .editor-toolbar {
-    display: flex;
-    align-items: center;
-    padding: 5px 10px;
     background-color: var(--editor-toolbar-bg);
     border-bottom: 1px solid var(--editor-toolbar-border);
-    z-index: 5;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Left editor toolbar - icons on the right */
+.editor-container:first-child .editor-toolbar {
+    justify-content: flex-end;
+}
+
+/* Right editor toolbar - icons on the left */
+.editor-container:last-child .editor-toolbar {
+    justify-content: flex-start;
 }
 
 .editor-btn {
@@ -177,7 +187,14 @@ html, body {
 
 .view-dropdown-container {
     position: relative;
+    display: inline-block;
     margin-left: auto;
+}
+
+/* Adjust view dropdown container for right editor */
+.editor-container:last-child .view-dropdown-container {
+    margin-left: 0;
+    margin-right: auto;
 }
 
 .view-dropdown {
@@ -190,6 +207,12 @@ html, body {
     display: none;
     z-index: 10;
     min-width: 120px;
+}
+
+/* Right editor dropdown positioning */
+.editor-container:last-child .view-dropdown {
+    right: auto;
+    left: 0;
 }
 
 .view-dropdown.show {
