@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Formatter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">JSON formatter</div>
+        <div class="header-tools">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Left Editor -->
+        <div class="editor-container">
+            <div class="editor-toolbar">
+                <button class="editor-btn" id="undo-input" title="Undo">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M4.5 8.5L9.5 3.5L9.5 6.5C11.5 6.5 13.5 7.5 13.5 10.5C13.5 11.5 12.5 13.5 11.5 13.5C10.5 13.5 9.5 12.5 9.5 11.5L7.5 11.5C7.5 13.5 9.5 15.5 11.5 15.5C13.5 15.5 15.5 13.5 15.5 10.5C15.5 7.5 13.5 4.5 9.5 4.5L9.5 1.5L4.5 6.5L4.5 8.5Z"/>
+                    </svg>
+                </button>
+                <button class="editor-btn" id="save-input" title="Save">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M13.5 3.5L13.5 14.5L2.5 14.5L2.5 1.5L11.5 1.5L13.5 3.5ZM3.5 13.5L12.5 13.5L12.5 4.5L10.5 4.5L10.5 8.5L4.5 8.5L4.5 4.5L3.5 4.5L3.5 13.5ZM9.5 2.5L9.5 7.5L5.5 7.5L5.5 2.5L9.5 2.5Z"/>
+                    </svg>
+                </button>
+                <div class="view-dropdown-container">
+                    <button class="editor-btn" id="view-input-btn" title="View Options">
+                        <span>View</span>
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                            <path d="M1 3L5 7L9 3"/>
+                        </svg>
+                    </button>
+                    <div class="view-dropdown" id="view-input-dropdown">
+                        <a href="#" data-view="text">Text</a>
+                        <a href="#" data-view="code">Code</a>
+                        <a href="#" data-view="table">Table</a>
+                        <a href="#" data-view="object">Object</a>
+                    </div>
+                </div>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="json-input"></textarea>
+            </div>
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="controls">
+            <button class="control-btn" id="upload-json">Upload Data</button>
+            
+            <button class="control-btn" id="validate-json">Validate</button>
+            
+            <button class="control-btn" id="format-json">Format / Beautify</button>
+            
+            <button class="control-btn" id="minify-json">Minify / Compact</button>
+            
+            <div class="convert-dropdown-container">
+                <button class="control-btn" id="convert-json">Convert JSON to...</button>
+                <div class="convert-dropdown" id="convert-dropdown">
+                    <a href="#" data-format="xml">XML</a>
+                    <a href="#" data-format="yaml">YAML</a>
+                    <a href="#" data-format="csv">CSV</a>
+                </div>
+            </div>
+            
+            <button class="control-btn" id="download-json">Download</button>
+            
+            <div class="tab-settings">
+                <div class="tab-size-wrapper">
+                    <select id="tab-size" class="tab-size-select">
+                        <option value="2" selected>2 Spaces</option>
+                        <option value="4">4 Spaces</option>
+                        <option value="tab">Tab</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="json-full-form">
+                JSON Full Form
+            </div>
+        </div>
+
+        <!-- Right Editor -->
+        <div class="editor-container">
+            <div class="editor-toolbar">
+                <button class="editor-btn" id="undo-output" title="Undo">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M4.5 8.5L9.5 3.5L9.5 6.5C11.5 6.5 13.5 7.5 13.5 10.5C13.5 11.5 12.5 13.5 11.5 13.5C10.5 13.5 9.5 12.5 9.5 11.5L7.5 11.5C7.5 13.5 9.5 15.5 11.5 15.5C13.5 15.5 15.5 13.5 15.5 10.5C15.5 7.5 13.5 4.5 9.5 4.5L9.5 1.5L4.5 6.5L4.5 8.5Z"/>
+                    </svg>
+                </button>
+                <button class="editor-btn" id="save-output" title="Save">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M13.5 3.5L13.5 14.5L2.5 14.5L2.5 1.5L11.5 1.5L13.5 3.5ZM3.5 13.5L12.5 13.5L12.5 4.5L10.5 4.5L10.5 8.5L4.5 8.5L4.5 4.5L3.5 4.5L3.5 13.5ZM9.5 2.5L9.5 7.5L5.5 7.5L5.5 2.5L9.5 2.5Z"/>
+                    </svg>
+                </button>
+                <div class="view-dropdown-container">
+                    <button class="editor-btn" id="view-output-btn" title="View Options">
+                        <span>View</span>
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                            <path d="M1 3L5 7L9 3"/>
+                        </svg>
+                    </button>
+                    <div class="view-dropdown" id="view-output-dropdown">
+                        <a href="#" data-view="text">Text</a>
+                        <a href="#" data-view="code">Code</a>
+                        <a href="#" data-view="table">Table</a>
+                        <a href="#" data-view="object">Object</a>
+                    </div>
+                </div>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="json-output"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-text">All working? It's okay. Please share to support us.</div>
+        <div class="social-links">
+            <a href="#" class="social-link">Share</a>
+            <a href="#" class="social-link">Tweet</a>
+            <a href="#" class="social-link">Share</a>
+            <a href="#" class="social-link">Share</a>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
