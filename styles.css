@@ -451,6 +451,85 @@ body.dark-theme .control-btn {
     background: var(--editor-bg);
 }
 
+/* JSONEditor theming */
+.jsoneditor {
+    background: var(--editor-bg) !important;
+    color: var(--editor-text) !important;
+}
+.jsoneditor-menu {
+    background: var(--editor-toolbar-bg) !important;
+    border-bottom: 1px solid var(--editor-toolbar-border) !important;
+}
+.jsoneditor-menu a,
+.jsoneditor-menu button,
+.jsoneditor-menu input,
+.jsoneditor-menu select,
+.jsoneditor-navigation-bar,
+.jsoneditor-statusbar {
+    color: var(--text-color) !important;
+}
+.jsoneditor-statusbar {
+    background: var(--editor-toolbar-bg) !important;
+    border-top: 1px solid var(--editor-toolbar-border) !important;
+}
+.jsoneditor-outer,
+.jsoneditor-inner,
+.jsoneditor-tree,
+.jsoneditor-table,
+.jsoneditor-text,
+.jsoneditor-values,
+.jsoneditor-fields {
+    background: var(--editor-bg) !important;
+    color: var(--editor-text) !important;
+}
+.jsoneditor-field,
+.jsoneditor-value,
+.jsoneditor-readonly {
+    color: var(--editor-text) !important;
+}
+.jsoneditor-frame {
+    border-color: var(--editor-toolbar-border) !important;
+}
+.jsoneditor td, .jsoneditor th {
+    border-color: var(--editor-toolbar-border) !important;
+}
+.jsoneditor-search input,
+.jsoneditor-search div,
+.jsoneditor-search button {
+    background: var(--button-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--button-border) !important;
+}
+
+/* Ace editor (used by JSONEditor code mode) */
+.ace_editor {
+    background: var(--editor-bg) !important;
+    color: var(--editor-text) !important;
+}
+.ace_gutter {
+    background: var(--editor-bg) !important;
+    color: var(--text-color) !important;
+    border-right: 1px solid var(--editor-toolbar-border) !important;
+}
+.ace_cursor {
+    border-left: 2px solid var(--editor-text) !important;
+}
+.ace_selection {
+    background: rgba(173, 214, 255, 0.35) !important;
+}
+body.dark-theme .ace_selection {
+    background: rgba(38, 79, 120, 0.4) !important;
+}
+.ace_marker-layer .ace_active-line {
+    background: rgba(128,128,128,0.1) !important;
+}
+.ace_marker-layer .ace_selection {
+    background: rgba(173, 214, 255, 0.35) !important;
+}
+body.dark-theme .ace_marker-layer .ace_selection {
+    background: rgba(38, 79, 120, 0.4) !important;
+}
+
 /* Error Line Highlighting */
 .error-line {
     background-color: var(--error-line-bg) !important;

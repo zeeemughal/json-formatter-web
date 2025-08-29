@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON Formatter</title>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
     <!-- JSONEditor CSS -->
     <link href="https://cdn.jsdelivr.net/npm/jsoneditor@latest/dist/jsoneditor.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -31,10 +30,16 @@
                         <path d="M4.5 8.5L9.5 3.5L9.5 6.5C11.5 6.5 13.5 7.5 13.5 10.5C13.5 11.5 12.5 13.5 11.5 13.5C10.5 13.5 9.5 12.5 9.5 11.5L7.5 11.5C7.5 13.5 9.5 15.5 11.5 15.5C13.5 15.5 15.5 13.5 15.5 10.5C15.5 7.5 13.5 4.5 9.5 4.5L9.5 1.5L4.5 6.5L4.5 8.5Z"/>
                     </svg>
                 </button>
+                <button class="editor-btn" id="copy-input" title="Copy to clipboard">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 1H3C2.45 1 2 1.45 2 2v9h2V3h6V1zm3 3H6C5.45 4 5 4.45 5 5v9c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 9H7V6h5v7z"/></svg>
+                </button>
                 <button class="editor-btn" id="save-input" title="Save">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M13.5 3.5L13.5 14.5L2.5 14.5L2.5 1.5L11.5 1.5L13.5 3.5ZM3.5 13.5L12.5 13.5L12.5 4.5L10.5 4.5L10.5 8.5L4.5 8.5L4.5 4.5L3.5 4.5L3.5 13.5ZM9.5 2.5L9.5 7.5L5.5 7.5L5.5 2.5L9.5 2.5Z"/>
                     </svg>
+                </button>
+                <button class="editor-btn" id="sample-input" title="Insert sample JSON">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1v6H2v2h6v6h2V9h6V7H10V1z"/></svg>
                 </button>
                 <div class="view-dropdown-container">
                     <button class="editor-btn" id="view-input-btn" title="View Options">
@@ -51,9 +56,7 @@
                     </div>
                 </div>
             </div>
-            <div class="editor-wrapper">
-                <textarea id="json-input"></textarea>
-            </div>
+            <div class="editor-wrapper"></div>
         </div>
 
         <!-- Controls Panel -->
@@ -100,6 +103,9 @@
                         <path d="M4.5 8.5L9.5 3.5L9.5 6.5C11.5 6.5 13.5 7.5 13.5 10.5C13.5 11.5 12.5 13.5 11.5 13.5C10.5 13.5 9.5 12.5 9.5 11.5L7.5 11.5C7.5 13.5 9.5 15.5 11.5 15.5C13.5 15.5 15.5 13.5 15.5 10.5C15.5 7.5 13.5 4.5 9.5 4.5L9.5 1.5L4.5 6.5L4.5 8.5Z"/>
                     </svg>
                 </button>
+                <button class="editor-btn" id="copy-output" title="Copy to clipboard">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10 1H3C2.45 1 2 1.45 2 2v9h2V3h6V1zm3 3H6C5.45 4 5 4.45 5 5v9c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 9H7V6h5v7z"/></svg>
+                </button>
                 <button class="editor-btn" id="save-output" title="Save">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M13.5 3.5L13.5 14.5L2.5 14.5L2.5 1.5L11.5 1.5L13.5 3.5ZM3.5 13.5L12.5 13.5L12.5 4.5L10.5 4.5L10.5 8.5L4.5 8.5L4.5 4.5L3.5 4.5L3.5 13.5ZM9.5 2.5L9.5 7.5L5.5 7.5L5.5 2.5L9.5 2.5Z"/>
@@ -120,9 +126,7 @@
                     </div>
                 </div>
             </div>
-            <div class="editor-wrapper">
-                <textarea id="json-output"></textarea>
-            </div>
+            <div class="editor-wrapper"></div>
         </div>
     </div>
 
@@ -137,10 +141,6 @@
         </div>
     </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
     <!-- JSONEditor JS -->
     <script src="https://cdn.jsdelivr.net/npm/jsoneditor@latest/dist/jsoneditor.min.js"></script>
     <script src="script.js"></script>

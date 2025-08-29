@@ -7,69 +7,65 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('dark-theme');
     }
     
-    // Load saved JSON input if available
+    // Load saved JSON input if available (start empty if none)
     const savedInput = localStorage.getItem('json-input');
-    let initialInput = savedInput || JSON.stringify({
-        "name": "JSON Formatter",
-        "version": "1.0.0",
-        "description": "Format, validate and convert JSON",
-        "features": ["Format", "Minify", "Validate", "Convert"],
-        "isAwesome": true,
-        "stats": {
-            "users": 10000,
-            "rating": 4.9
+    let initialInput = (savedInput !== null) ? savedInput : '';
+    
+    // JSONEditor-only implementation (no CodeMirror)
+
+    // Create JSONEditor hosts and instances
+    const [inputWrapper, outputWrapper] = document.querySelectorAll('.editor-wrapper');
+    const inputJsonHost = document.createElement('div');
+    inputJsonHost.className = 'jsoneditor-host';
+    inputWrapper.appendChild(inputJsonHost);
+    const outputJsonHost = document.createElement('div');
+    outputJsonHost.className = 'jsoneditor-host';
+    outputWrapper.appendChild(outputJsonHost);
+
+    const inputJE = new JSONEditor(inputJsonHost, {
+        mode: 'code',
+        history: true,
+        onEvent: function(node, event) {
+            if (event.type === 'change') {
+                localStorage.setItem('json-input', getJEText(inputJE));
+            }
         }
-    }, null, 2);
-    
-    // Initialize CodeMirror editors
-    const inputEditor = CodeMirror.fromTextArea(document.getElementById('json-input'), {
-        lineNumbers: true,
-        mode: 'application/json',
-        theme: 'default',
-        lineWrapping: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        indentUnit: 2,
-        tabSize: 2,
-        extraKeys: {
-            'Ctrl-Enter': formatJson,
-            'Cmd-Enter': formatJson,
-            'Ctrl-Z': () => inputEditor.undo(),
-            'Cmd-Z': () => inputEditor.undo()
-        },
-        styleActiveLine: true,
-        gutters: ["CodeMirror-linenumbers", "CodeMirror-lint-markers"]
     });
     
-    // Set initial value and save changes to localStorage
-    inputEditor.setValue(initialInput);
-    inputEditor.on('change', function() {
-        localStorage.setItem('json-input', inputEditor.getValue());
+    const outputJE = new JSONEditor(outputJsonHost, {
+        mode: 'code',
+        history: true,
+        onEvent: function(node, event) {
+            if (event.type === 'change') {
+                localStorage.setItem('json-output', getJEText(outputJE));
+            }
+        }
     });
 
-    const outputEditor = CodeMirror.fromTextArea(document.getElementById('json-output'), {
-        lineNumbers: true,
-        mode: 'application/json',
-        theme: 'default',
-        lineWrapping: true,
-        readOnly: false, // Allow editing for undo functionality
-        styleActiveLine: true,
-        extraKeys: {
-            'Ctrl-Z': () => outputEditor.undo(),
-            'Cmd-Z': () => outputEditor.undo()
-        },
-        gutters: ["CodeMirror-linenumbers", "CodeMirror-lint-markers"]
-    });
+    // Sample JSON used by the Sample button
+    const sampleJson = {
+        name: "JSON Formatter",
+        version: "1.0.0",
+        description: "Format, validate and convert JSON",
+        features: ["Format", "Minify", "Validate", "Convert"],
+        isAwesome: true,
+        stats: { users: 10000, rating: 4.9 }
+    };
+    const sampleJsonStr = JSON.stringify(sampleJson, null, 2);
 
-    // Load saved output if available
-    const savedOutput = localStorage.getItem('json-output');
-    if (savedOutput) {
-        outputEditor.setValue(savedOutput);
-    }
-    // Persist output on change
-    outputEditor.on('change', function() {
-        localStorage.setItem('json-output', outputEditor.getValue());
-    });
+    // Helpers
+    function getJEText(je) { try { return je.getText(); } catch { try { return JSON.stringify(je.get()); } catch { return ''; } } }
+    function setJEText(je, text) { try { je.setText(text); } catch { try { je.set(JSON.parse(text)); } catch { /* ignore */ } } }
+    function getJEJson(je) { try { return je.get(); } catch { try { return JSON.parse(getJEText(je)); } catch { return null; } } }
+
+    // Initialize editors
+    setJEText(inputJE, initialInput);
+    // Start with empty output
+    setJEText(outputJE, '');
+    // Clear any saved output from localStorage to prevent it from reappearing
+    localStorage.removeItem('json-output');
+
+    // Persist changes are now handled by onEvent callbacks
 
     // Theme Toggle
     const themeToggle = document.getElementById('theme-toggle');
@@ -85,9 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         themeIcon.textContent = isDark ? '☀️' : '🌙';
         
-        // Update editor themes
-        inputEditor.setOption('theme', 'default');
-        outputEditor.setOption('theme', 'default');
+        // JSONEditor styles follow CSS variables; nothing to change
         
         // Update control buttons styling if needed
         const controlButtons = document.querySelectorAll('.control-btn');
@@ -130,13 +124,22 @@ document.addEventListener('DOMContentLoaded', function() {
     downloadBtn.addEventListener('click', downloadJson);
     tabSizeSelect.addEventListener('change', updateTabSize);
     
-    // Undo buttons
-    undoInputBtn.addEventListener('click', () => inputEditor.undo());
-    undoOutputBtn.addEventListener('click', () => outputEditor.undo());
+    // Undo & Copy & Sample
+    undoInputBtn.addEventListener('click', () => inputJE.undo());
+    undoOutputBtn.addEventListener('click', () => outputJE.undo());
+    const copyInputBtn = document.getElementById('copy-input');
+    const copyOutputBtn = document.getElementById('copy-output');
+    if (copyInputBtn) copyInputBtn.addEventListener('click', async () => { await navigator.clipboard.writeText(getJEText(inputJE)); showNotification('Copied input to clipboard', 'success'); });
+    if (copyOutputBtn) copyOutputBtn.addEventListener('click', async () => { await navigator.clipboard.writeText(getJEText(outputJE)); showNotification('Copied output to clipboard', 'success'); });
+    const sampleBtn = document.getElementById('sample-input');
+    if (sampleBtn) sampleBtn.addEventListener('click', () => {
+        setJEText(inputJE, sampleJsonStr);
+        showNotification('Sample JSON inserted', 'success');
+    });
     
     // Save buttons
-    saveInputBtn.addEventListener('click', () => saveToFile(inputEditor.getValue(), 'input.json'));
-    saveOutputBtn.addEventListener('click', () => saveToFile(outputEditor.getValue(), 'output.json'));
+    saveInputBtn.addEventListener('click', () => saveToFile(getJEText(inputJE), 'input.json'));
+    saveOutputBtn.addEventListener('click', () => saveToFile(getJEText(outputJE), 'output.json'));
     
     // View dropdown toggles
     viewInputBtn.addEventListener('click', (e) => {
@@ -164,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const viewType = e.target.getAttribute('data-view');
-            changeView(inputEditor, viewType);
+            changeView('input', viewType);
             viewInputDropdown.classList.remove('show');
         });
     });
@@ -173,16 +176,16 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const viewType = e.target.getAttribute('data-view');
-            changeView(outputEditor, viewType);
+            changeView('output', viewType);
             viewOutputDropdown.classList.remove('show');
         });
     });
-    fileInput.addEventListener('change', handleFileUpload);
+    // (fileInput change already attached above)
 
     // Format JSON
     function formatJson() {
         try {
-            const input = inputEditor.getValue().trim();
+            const input = getJEText(inputJE).trim();
             if (!input) {
                 showNotification('Please enter some JSON to format', 'info');
                 return;
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tabSize = tabSizeSelect.value === 'tab' ? '\t' : parseInt(tabSizeSelect.value);
             const formatted = JSON.stringify(parsed, null, tabSize);
             
-            outputEditor.setValue(formatted);
+            setJEText(outputJE, formatted);
             showNotification('JSON formatted successfully!', 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -202,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Minify JSON
     function minifyJson() {
         try {
-            const input = inputEditor.getValue().trim();
+            const input = getJEText(inputJE).trim();
             if (!input) {
                 showNotification('Please enter some JSON to minify', 'info');
                 return;
@@ -211,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const parsed = JSON.parse(input);
             const minified = JSON.stringify(parsed);
             
-            outputEditor.setValue(minified);
+            setJEText(outputJE, minified);
             showNotification('JSON minified successfully!', 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -221,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validate JSON
     function validateJson() {
         try {
-            const input = inputEditor.getValue().trim();
+            const input = getJEText(inputJE).trim();
             if (!input) {
                 showNotification('Please enter some JSON to validate', 'info');
                 return;
@@ -230,14 +233,13 @@ document.addEventListener('DOMContentLoaded', function() {
             JSON.parse(input);
             showNotification('✓ Valid JSON', 'success');
             
-            // Clear any previous error markers
-            outputEditor.setValue('');
-            clearErrorMarkers(outputEditor);
+            // Clear any previous error text
+            setJEText(outputJE, '');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
             
             // Display error in output editor with line highlighting
-            const errorInfo = parseJsonError(error.message, inputEditor.getValue());
+            const errorInfo = parseJsonError(error.message, getJEText(inputJE));
             displayErrorInOutput(errorInfo);
         }
     }
@@ -271,26 +273,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const errorMessage = `Error: ${errorInfo.message}\nAt line ${errorInfo.line}, column ${errorInfo.column}`;
         
         // Set error message in output editor
-        outputEditor.setValue(errorMessage);
-        
-        // Highlight the error line in input editor
-        const errorLine = errorInfo.line - 1; // CodeMirror uses 0-based line numbers
-        
-        // Clear any previous error markers
-        clearErrorMarkers(inputEditor);
-        
-        // Add error marker
-        inputEditor.addLineClass(errorLine, 'background', 'error-line');
-        
-        // Add error gutter marker
-        const marker = document.createElement('div');
-        marker.className = 'error-marker';
-        marker.innerHTML = '⚠️';
-        marker.title = errorInfo.message;
-        inputEditor.setGutterMarker(errorLine, 'CodeMirror-lint-markers', marker);
-        
-        // Scroll to error line
-        inputEditor.scrollIntoView({line: errorLine, ch: 0}, 100);
+        setJEText(outputJE, errorMessage);
+
+        // CodeMirror is hidden; skip line/gutter highlighting to avoid confusion
     }
     
     // Clear error markers
@@ -344,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Convert JSON to other formats
     function convertJson(format) {
         try {
-            const input = inputEditor.getValue().trim();
+            const input = getJEText(inputJE).trim();
             if (!input) {
                 showNotification(`Please enter some JSON to convert to ${format.toUpperCase()}`, 'info');
                 return;
@@ -368,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
             }
             
-            outputEditor.setValue(converted);
+            setJEText(outputJE, converted);
             showNotification(`JSON converted to ${format.toUpperCase()} successfully!`, 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -424,67 +409,70 @@ document.addEventListener('DOMContentLoaded', function() {
         return xml;
     }
     
-    // JSON to YAML conversion
-    function jsonToYaml(obj, indent = '') {
+    // JSON to YAML conversion - Simple implementation
+    function jsonToYaml(obj) {
+        // Handle primitive types
+        if (obj === null || obj === undefined) return 'null';
+        if (typeof obj === 'string') return JSON.stringify(obj);
+        if (typeof obj === 'number' || typeof obj === 'boolean') return String(obj);
+        
+        // Handle arrays
+        if (Array.isArray(obj)) {
+            if (obj.length === 0) return '[]';
+            return '\n' + obj.map(item => {
+                const value = jsonToYaml(item);
+                if (typeof item === 'object' && item !== null) {
+                    // For objects in arrays, we need to handle indentation
+                    const lines = value.split('\n');
+                    return '- ' + lines[0] + 
+                           (lines.length > 1 ? '\n  ' + lines.slice(1).join('\n  ') : '');
+                }
+                return '- ' + value;
+            }).join('\n');
+        }
+        
+        // Handle objects
         let yaml = '';
+        const entries = Object.entries(obj);
         
-        function parseValue(value, indent) {
-            if (value === null) {
-                return 'null';
-            } else if (typeof value === 'string') {
-                // Check if string needs quotes
-                if (/[:\[\]{}\-,#\s]/.test(value) || value === '' || !isNaN(value)) {
-                    return `"${value.replace(/"/g, '\\"')}"`;
-                }
-                return value;
-            } else if (typeof value === 'number' || typeof value === 'boolean') {
-                return String(value);
+        for (let i = 0; i < entries.length; i++) {
+            const [key, value] = entries[i];
+            const isLast = i === entries.length - 1;
+            const needsQuotes = !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key);
+            const formattedKey = needsQuotes ? `"${key}"` : key;
+            
+            if (value === null || value === undefined) {
+                yaml += `${formattedKey}: null${isLast ? '' : '\n'}`;
             } else if (Array.isArray(value)) {
-                let result = '';
-                value.forEach(item => {
-                    if (typeof item === 'object' && item !== null) {
-                        result += `\n${indent}- `;
-                        const nestedIndent = indent + '  ';
-                        if (Array.isArray(item)) {
-                            result += parseValue(item, nestedIndent);
-                        } else {
-                            const objResult = parseObject(item, nestedIndent);
-                            result += objResult.substring(nestedIndent.length);
-                        }
-                    } else {
-                        result += `\n${indent}- ${parseValue(item, indent + '  ')}`;
-                    }
-                });
-                return result || '[]';
+                yaml += `${formattedKey}:`;
+                const arrayYaml = jsonToYaml(value);
+                if (arrayYaml === '[]') {
+                    yaml += ' []';
+                } else {
+                    yaml += arrayYaml;
+                }
+                if (!isLast) yaml += '\n';
             } else if (typeof value === 'object') {
-                return parseObject(value, indent);
-            }
-            return '';
-        }
-        
-        function parseObject(obj, indent) {
-            let result = '';
-            for (const key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                    const value = obj[key];
-                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                        result += `\n${indent}${key}:`;
-                        const nested = parseObject(value, indent + '  ');
-                        if (nested.trim()) {
-                            result += nested;
-                        }
-                    } else if (Array.isArray(value)) {
-                        result += `\n${indent}${key}:${parseValue(value, indent + '  ')}`;
-                    } else {
-                        result += `\n${indent}${key}: ${parseValue(value, indent + '  ')}`;
+                yaml += `${formattedKey}:`;
+                const nestedYaml = jsonToYaml(value);
+                if (nestedYaml === '{}') {
+                    yaml += ' {}';
+                } else {
+                    // Add proper indentation for nested objects
+                    const lines = nestedYaml.split('\n');
+                    yaml += ' ' + lines[0];
+                    for (let j = 1; j < lines.length; j++) {
+                        yaml += '\n  ' + lines[j];
                     }
                 }
+                if (!isLast) yaml += '\n';
+            } else {
+                yaml += `${formattedKey}: ${jsonToYaml(value)}`;
+                if (!isLast) yaml += '\n';
             }
-            return result;
         }
         
-        yaml = parseObject(obj, indent);
-        return yaml.substring(1); // Remove the first newline
+        return yaml;
     }
     
     // JSON to CSV conversion
@@ -536,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const content = e.target.result;
                 // Validate JSON
                 JSON.parse(content);
-                inputEditor.setValue(content);
+                setJEText(inputJE, content);
                 showNotification('File loaded successfully!', 'success');
             } catch (error) {
                 showNotification('Invalid JSON file: ' + error.message, 'error');
@@ -554,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Download JSON
     function downloadJson() {
         try {
-            const output = outputEditor.getValue().trim();
+            const output = getJEText(outputJE).trim();
             if (!output) {
                 showNotification('No JSON to download', 'info');
                 return;
@@ -580,106 +568,50 @@ document.addEventListener('DOMContentLoaded', function() {
         URL.revokeObjectURL(url);
     }
     
-    // Change view type
-    // JSONEditor instances and containers
-    let inputJsonEditor = null;
-    let outputJsonEditor = null;
-    const [inputWrapper, outputWrapper] = document.querySelectorAll('.editor-wrapper');
-    const inputJsonHost = document.createElement('div');
-    inputJsonHost.className = 'jsoneditor-host';
-    inputJsonHost.style.display = 'none';
-    inputWrapper.appendChild(inputJsonHost);
-    const outputJsonHost = document.createElement('div');
-    outputJsonHost.className = 'jsoneditor-host';
-    outputJsonHost.style.display = 'none';
-    outputWrapper.appendChild(outputJsonHost);
+    // Change view using JSONEditor only
+    function changeView(pane, viewType) {
+        const isInputPane = pane === 'input';
+        const je = isInputPane ? inputJE : outputJE;
+        const text = getJEText(je).trim();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
 
-    function ensureJsonEditor(editorRef, hostEl, mode) {
-        if (!editorRef.instance) {
-            editorRef.instance = new JSONEditor(hostEl, {
-                mode,
-                onChange: () => {
-                    try {
-                        const data = editorRef.instance.get();
-                        const jsonText = JSON.stringify(data, null, inputEditor.getOption('tabSize'));
-                        editorRef.cm.setValue(jsonText);
-                        localStorage.setItem(editorRef.storageKey, jsonText);
-                    } catch (e) { /* ignore until valid */ }
-                }
-            });
-        } else {
-            editorRef.instance.updateOptions({ mode });
-        }
-    }
+        const modeMap = { text: 'text', code: 'code', object: 'tree', table: 'table' };
+        const mode = modeMap[viewType];
+        if (!mode) { showNotification(`View type '${viewType}' not supported`, 'error'); return; }
 
-    inputJsonEditor = { instance: null, host: inputJsonHost, cm: inputEditor, storageKey: 'json-input' };
-    outputJsonEditor = { instance: null, host: outputJsonHost, cm: outputEditor, storageKey: 'json-output' };
-
-    function showCodeMirror(editorRef) {
-        editorRef.host.style.display = 'none';
-        editorRef.cm.getWrapperElement().style.display = '';
-    }
-
-    function showJsonEditor(editorRef) {
-        editorRef.cm.getWrapperElement().style.display = 'none';
-        editorRef.host.style.display = '';
-    }
-
-    function changeView(editor, viewType) {
-        const isInput = editor === inputEditor;
-        const ref = isInput ? inputJsonEditor : outputJsonEditor;
-        const content = editor.getValue().trim();
-        if (!content) {
-            showNotification('No content to display', 'info');
-            return;
+        if (!text) {
+            // No content: set sensible defaults per mode
+            if (mode === 'table') data = [];
+            else if (mode === 'tree') data = {};
+            else data = '';
+        } else if (mode === 'table') {
+            // Coerce to array for table view
+            if (!Array.isArray(data)) {
+                data = [typeof data === 'object' ? data : { value: data }];
+            }
         }
 
         try {
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (e) {
-                parsed = content;
+            je.updateOptions({ mode });
+            if (typeof data === 'string' && (mode === 'text' || mode === 'code')) {
+                setJEText(je, data);
+            } else {
+                je.set(data);
             }
-
-            switch (viewType) {
-                case 'text': {
-                    const displayContent = typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, editor.getOption('tabSize'));
-                    showCodeMirror(ref);
-                    editor.setOption('mode', 'text/plain');
-                    editor.setValue(displayContent);
-                    break;
-                }
-                case 'code': {
-                    const displayContent = typeof parsed === 'string' ? (() => { try { return JSON.stringify(JSON.parse(parsed), null, editor.getOption('tabSize')); } catch { return parsed; } })() : JSON.stringify(parsed, null, editor.getOption('tabSize'));
-                    showCodeMirror(ref);
-                    editor.setOption('mode', 'application/json');
-                    editor.setValue(displayContent);
-                    break;
-                }
-                case 'table': {
-                    if (typeof parsed !== 'object') { showNotification('Cannot display as table: not a valid object', 'error'); return; }
-                    ensureJsonEditor(ref, ref.host, 'table');
-                    ref.instance.set(parsed);
-                    showJsonEditor(ref);
-                    break;
-                }
-                case 'object': {
-                    if (typeof parsed !== 'object') { showNotification('Cannot display as object: not a valid object', 'error'); return; }
-                    ensureJsonEditor(ref, ref.host, 'tree');
-                    ref.instance.set(parsed);
-                    showJsonEditor(ref);
-                    break;
-                }
-                default:
-                    showNotification(`View type '${viewType}' not supported`, 'error');
-                    return;
-            }
+            // Persist selected view per pane
+            localStorage.setItem(isInputPane ? 'view-input' : 'view-output', viewType);
             showNotification(`Changed view to ${viewType}`, 'success');
-        } catch (error) {
-            showNotification('Error changing view: ' + error.message, 'error');
+        } catch (e) {
+            showNotification('Error changing view: ' + e.message, 'error');
         }
     }
+
+    // Restore last selected views on load
+    const lastInputView = localStorage.getItem('view-input') || 'code';
+    const lastOutputView = localStorage.getItem('view-output') || 'code';
+    changeView('input', lastInputView);
+    changeView('output', lastOutputView);
     
     // Convert object to HTML table
     function objectToTable(obj) {
@@ -804,9 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update tab size
     function updateTabSize() {
-        const tabSize = tabSizeSelect.value;
-        inputEditor.setOption('indentUnit', tabSize === 'tab' ? '\t' : parseInt(tabSize));
-        inputEditor.setOption('tabSize', tabSize === 'tab' ? 4 : parseInt(tabSize));
+        // No CodeMirror; tab size is used during formatJson via select value
     }
 
     // Show notification
@@ -824,6 +754,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    // Focus input editor on load
-    inputEditor.focus();
+    // No CodeMirror focus
 });
