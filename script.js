@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputEditor = CodeMirror.fromTextArea(document.getElementById('json-input'), {
         lineNumbers: true,
         mode: 'application/json',
-        theme: isDarkMode ? 'monokai' : 'default',
+        theme: 'default',
         lineWrapping: true,
         autoCloseBrackets: true,
         matchBrackets: true,
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const outputEditor = CodeMirror.fromTextArea(document.getElementById('json-output'), {
         lineNumbers: true,
         mode: 'application/json',
-        theme: isDarkMode ? 'monokai' : 'default',
+        theme: 'default',
         lineWrapping: true,
         readOnly: false, // Allow editing for undo functionality
         styleActiveLine: true,
@@ -59,6 +59,16 @@ document.addEventListener('DOMContentLoaded', function() {
             'Cmd-Z': () => outputEditor.undo()
         },
         gutters: ["CodeMirror-linenumbers", "CodeMirror-lint-markers"]
+    });
+
+    // Load saved output if available
+    const savedOutput = localStorage.getItem('json-output');
+    if (savedOutput) {
+        outputEditor.setValue(savedOutput);
+    }
+    // Persist output on change
+    outputEditor.on('change', function() {
+        localStorage.setItem('json-output', outputEditor.getValue());
     });
 
     // Theme Toggle
@@ -76,8 +86,8 @@ document.addEventListener('DOMContentLoaded', function() {
         themeIcon.textContent = isDark ? '☀️' : '🌙';
         
         // Update editor themes
-        inputEditor.setOption('theme', isDark ? 'monokai' : 'default');
-        outputEditor.setOption('theme', isDark ? 'monokai' : 'default');
+        inputEditor.setOption('theme', 'default');
+        outputEditor.setOption('theme', 'default');
         
         // Update control buttons styling if needed
         const controlButtons = document.querySelectorAll('.control-btn');
@@ -286,55 +296,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear error markers
     function clearErrorMarkers(editor) {
         for (let i = 0; i < editor.lineCount(); i++) {
-        
-        // Calculate line and column from position
-        const lines = jsonText.substring(0, position).split('\n');
-        lineNumber = lines.length;
-        columnNumber = lines[lines.length - 1].length + 1;
+            editor.removeLineClass(i, 'background', 'error-line');
+            editor.setGutterMarker(i, 'CodeMirror-lint-markers', null);
+        }
     }
-    
-    return {
-        message: errorMessage,
-        line: lineNumber,
-        column: columnNumber
-    };
-}
-    
-// Display error in output editor
-function displayErrorInOutput(errorInfo) {
-    // Create VS Code style error message
-    const errorMessage = `Error: ${errorInfo.message}\nAt line ${errorInfo.line}, column ${errorInfo.column}`;
-    
-    // Set error message in output editor
-    outputEditor.setValue(errorMessage);
-    
-    // Highlight the error line in input editor
-    const errorLine = errorInfo.line - 1; // CodeMirror uses 0-based line numbers
-    
-    // Clear any previous error markers
-    clearErrorMarkers(inputEditor);
-    
-    // Add error marker
-    inputEditor.addLineClass(errorLine, 'background', 'error-line');
-    
-    // Add error gutter marker
-    const marker = document.createElement('div');
-    marker.className = 'error-marker';
-    marker.innerHTML = '';
-    marker.title = errorInfo.message;
-    inputEditor.setGutterMarker(errorLine, 'CodeMirror-lint-markers', marker);
-    
-    // Scroll to error line
-    inputEditor.scrollIntoView({line: errorLine, ch: 0}, 100);
-}
-
-// Clear error markers
-function clearErrorMarkers(editor) {
-    for (let i = 0; i < editor.lineCount(); i++) {
-        editor.removeLineClass(i, 'background', 'error-line');
-        editor.setGutterMarker(i, 'CodeMirror-lint-markers', null);
-    }
-}
 
     // Toggle convert dropdown
     function toggleConvertDropdown(e) {
@@ -616,84 +581,100 @@ function clearErrorMarkers(editor) {
     }
     
     // Change view type
+    // JSONEditor instances and containers
+    let inputJsonEditor = null;
+    let outputJsonEditor = null;
+    const [inputWrapper, outputWrapper] = document.querySelectorAll('.editor-wrapper');
+    const inputJsonHost = document.createElement('div');
+    inputJsonHost.className = 'jsoneditor-host';
+    inputJsonHost.style.display = 'none';
+    inputWrapper.appendChild(inputJsonHost);
+    const outputJsonHost = document.createElement('div');
+    outputJsonHost.className = 'jsoneditor-host';
+    outputJsonHost.style.display = 'none';
+    outputWrapper.appendChild(outputJsonHost);
+
+    function ensureJsonEditor(editorRef, hostEl, mode) {
+        if (!editorRef.instance) {
+            editorRef.instance = new JSONEditor(hostEl, {
+                mode,
+                onChange: () => {
+                    try {
+                        const data = editorRef.instance.get();
+                        const jsonText = JSON.stringify(data, null, inputEditor.getOption('tabSize'));
+                        editorRef.cm.setValue(jsonText);
+                        localStorage.setItem(editorRef.storageKey, jsonText);
+                    } catch (e) { /* ignore until valid */ }
+                }
+            });
+        } else {
+            editorRef.instance.updateOptions({ mode });
+        }
+    }
+
+    inputJsonEditor = { instance: null, host: inputJsonHost, cm: inputEditor, storageKey: 'json-input' };
+    outputJsonEditor = { instance: null, host: outputJsonHost, cm: outputEditor, storageKey: 'json-output' };
+
+    function showCodeMirror(editorRef) {
+        editorRef.host.style.display = 'none';
+        editorRef.cm.getWrapperElement().style.display = '';
+    }
+
+    function showJsonEditor(editorRef) {
+        editorRef.cm.getWrapperElement().style.display = 'none';
+        editorRef.host.style.display = '';
+    }
+
     function changeView(editor, viewType) {
+        const isInput = editor === inputEditor;
+        const ref = isInput ? inputJsonEditor : outputJsonEditor;
         const content = editor.getValue().trim();
         if (!content) {
             showNotification('No content to display', 'info');
             return;
         }
-        
+
         try {
             let parsed;
-            let displayContent;
-            
-            // For input editor, always try to parse as JSON
-            if (editor === inputEditor) {
+            try {
                 parsed = JSON.parse(content);
-            } else {
-                // For output editor, check if it's already in another format
-                try {
-                    parsed = JSON.parse(content);
-                } catch (e) {
-                    // If not JSON, just use the content as is
-                    parsed = content;
-                }
+            } catch (e) {
+                parsed = content;
             }
-            
+
             switch (viewType) {
-                case 'text':
-                    if (typeof parsed === 'string') {
-                        displayContent = parsed;
-                    } else {
-                        displayContent = JSON.stringify(parsed, null, editor.getOption('tabSize'));
-                    }
+                case 'text': {
+                    const displayContent = typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, editor.getOption('tabSize'));
+                    showCodeMirror(ref);
                     editor.setOption('mode', 'text/plain');
+                    editor.setValue(displayContent);
                     break;
-                    
-                case 'code':
-                    if (typeof parsed === 'string') {
-                        try {
-                            // Try to parse as JSON if it's a string
-                            const jsonObj = JSON.parse(parsed);
-                            displayContent = JSON.stringify(jsonObj, null, editor.getOption('tabSize'));
-                        } catch (e) {
-                            // If not valid JSON, keep as is
-                            displayContent = parsed;
-                        }
-                    } else {
-                        displayContent = JSON.stringify(parsed, null, editor.getOption('tabSize'));
-                    }
+                }
+                case 'code': {
+                    const displayContent = typeof parsed === 'string' ? (() => { try { return JSON.stringify(JSON.parse(parsed), null, editor.getOption('tabSize')); } catch { return parsed; } })() : JSON.stringify(parsed, null, editor.getOption('tabSize'));
+                    showCodeMirror(ref);
                     editor.setOption('mode', 'application/json');
+                    editor.setValue(displayContent);
                     break;
-                    
-                case 'table':
-                    if (typeof parsed === 'object') {
-                        // Create HTML table representation
-                        displayContent = objectToTable(parsed);
-                        editor.setOption('mode', 'text/html');
-                    } else {
-                        showNotification('Cannot display as table: not a valid object', 'error');
-                        return;
-                    }
+                }
+                case 'table': {
+                    if (typeof parsed !== 'object') { showNotification('Cannot display as table: not a valid object', 'error'); return; }
+                    ensureJsonEditor(ref, ref.host, 'table');
+                    ref.instance.set(parsed);
+                    showJsonEditor(ref);
                     break;
-                    
-                case 'object':
-                    if (typeof parsed === 'object') {
-                        // Create a tree-like representation
-                        displayContent = objectToTreeView(parsed);
-                        editor.setOption('mode', 'text/html');
-                    } else {
-                        showNotification('Cannot display as object: not a valid object', 'error');
-                        return;
-                    }
+                }
+                case 'object': {
+                    if (typeof parsed !== 'object') { showNotification('Cannot display as object: not a valid object', 'error'); return; }
+                    ensureJsonEditor(ref, ref.host, 'tree');
+                    ref.instance.set(parsed);
+                    showJsonEditor(ref);
                     break;
-                    
+                }
                 default:
                     showNotification(`View type '${viewType}' not supported`, 'error');
                     return;
             }
-            
-            editor.setValue(displayContent);
             showNotification(`Changed view to ${viewType}`, 'success');
         } catch (error) {
             showNotification('Error changing view: ' + error.message, 'error');
@@ -843,20 +824,6 @@ function clearErrorMarkers(editor) {
         }, 3000);
     }
 
-    // Initialize with example JSON
-    const exampleJson = {
-        "example": {
-            "string": "Hello, World!",
-            "number": 42,
-            "boolean": true,
-            "nullValue": null,
-            "array": [1, 2, 3],
-            "nested": {
-                "key": "value"
-            }
-        }
-    };
-    
-    inputEditor.setValue(JSON.stringify(exampleJson, null, 2));
+    // Focus input editor on load
     inputEditor.focus();
 });
