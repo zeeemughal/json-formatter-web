@@ -729,3 +729,88 @@ details summary:hover {
 .jsoneditor-menu {
     display: none !important;
 }
+/* Fix JSONEditor tree lines in dark mode */
+.dark-theme .jsoneditor-tree .jsoneditor-tree-inner {
+    background-color: var(--editor-bg) !important;
+}
+
+.dark-theme .jsoneditor-tree .jsoneditor-tree-inner .jsoneditor-tree-button {
+    background-color: var(--text-color) !important;
+}
+
+.dark-theme .jsoneditor-tree .jsoneditor-tree-inner .jsoneditor-tree-button:before,
+.dark-theme .jsoneditor-tree .jsoneditor-tree-inner .jsoneditor-tree-button:after {
+    background-color: var(--text-color) !important;
+}
+
+/* More specific targeting for tree lines */
+.dark-theme .jsoneditor-tree table.jsoneditor-tree tr td {
+    border-left: 1px solid var(--border-color) !important;
+}
+
+.dark-theme .jsoneditor-tree .jsoneditor-button {
+    background-color: transparent !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark-theme .jsoneditor-tree .jsoneditor-button:before,
+.dark-theme .jsoneditor-tree .jsoneditor-button:after {
+    background-color: var(--text-color) !important;
+}
+/* Fix JSONEditor code mode folding lines in dark mode */
+.dark-theme .ace-jsoneditor .ace_fold-widget {
+    background-color: var(--text-color) !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_gutter-cell {
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_indent-guide {
+    background: var(--border-color) !important;
+}
+/* Force JSONEditor text colors in dark mode */
+.dark-theme .ace-jsoneditor {
+    background-color: var(--editor-bg) !important;
+    color: #f8f8f2 !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_scroller {
+    background-color: var(--editor-bg) !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_content {
+    background-color: var(--editor-bg) !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_string {
+    color: #e6db74 !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_constant.ace_numeric {
+    color: #ae81ff !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_constant.ace_language.ace_boolean {
+    color: #ae81ff !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_keyword {
+    color: #f92672 !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_paren {
+    color: #f8f8f2 !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_variable {
+    color: #66d9ef !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_text {
+    color: #f8f8f2 !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_punctuation {
+    color: #f8f8f2 !important;
+}

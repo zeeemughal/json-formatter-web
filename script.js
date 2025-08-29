@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputJE = new JSONEditor(inputJsonHost, {
         mode: 'code',
         history: true,
-        theme: isDarkMode ? 'ace/theme/monokai' : 'ace/theme/textmate',
         onEvent: function(node, event) {
             if (event.type === 'change') {
                 localStorage.setItem('json-input', getJEText(inputJE));
@@ -47,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const outputJE = new JSONEditor(outputJsonHost, {
         mode: 'code',
         history: true,
-        theme: isDarkMode ? 'ace/theme/monokai' : 'ace/theme/textmate',
         onEvent: function(node, event) {
             if (event.type === 'change') {
                 localStorage.setItem('json-output', getJEText(outputJE));
@@ -121,7 +119,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Initialize editors
-    setJEText(inputJE, initialInput);
+    try {
+        setJEText(inputJE, initialInput);
+    } catch (e) {
+        // Clear invalid saved input
+        localStorage.removeItem('json-input');
+        setJEText(inputJE, '');
+    }
     // Start with empty output
     setJEText(outputJE, '');
     // Clear any saved output from localStorage to prevent it from reappearing
@@ -142,11 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('dark-theme', isDark);
         
         themeIcon.textContent = isDark ? '☀️' : '🌙';
-        
-        // Update JSONEditor themes
-        const theme = isDark ? 'ace/theme/monokai' : 'ace/theme/textmate';
-        inputJE.aceEditor.setTheme(theme);
-        outputJE.aceEditor.setTheme(theme);
         
         // Update CodeMirror themes
         const cmTheme = isDark ? 'material-darker' : 'default';
@@ -679,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
 
-        const modeMap = { text: 'text', code: 'code', object: 'table', table: 'tree' };
+        const modeMap = { text: 'text', code: 'code', object: 'view', table: 'tree' };
         const mode = modeMap[viewType];
         if (!mode) { showNotification(`View type '${viewType}' not supported`, 'error'); return; }
 
