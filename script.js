@@ -286,25 +286,86 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear error markers
     function clearErrorMarkers(editor) {
         for (let i = 0; i < editor.lineCount(); i++) {
-            editor.removeLineClass(i, 'background', 'error-line');
-            editor.setGutterMarker(i, 'CodeMirror-lint-markers', null);
+        
+        // Calculate line and column from position
+        const lines = jsonText.substring(0, position).split('\n');
+        lineNumber = lines.length;
+        columnNumber = lines[lines.length - 1].length + 1;
+    }
+    
+    return {
+        message: errorMessage,
+        line: lineNumber,
+        column: columnNumber
+    };
+}
+    
+// Display error in output editor
+function displayErrorInOutput(errorInfo) {
+    // Create VS Code style error message
+    const errorMessage = `Error: ${errorInfo.message}\nAt line ${errorInfo.line}, column ${errorInfo.column}`;
+    
+    // Set error message in output editor
+    outputEditor.setValue(errorMessage);
+    
+    // Highlight the error line in input editor
+    const errorLine = errorInfo.line - 1; // CodeMirror uses 0-based line numbers
+    
+    // Clear any previous error markers
+    clearErrorMarkers(inputEditor);
+    
+    // Add error marker
+    inputEditor.addLineClass(errorLine, 'background', 'error-line');
+    
+    // Add error gutter marker
+    const marker = document.createElement('div');
+    marker.className = 'error-marker';
+    marker.innerHTML = '';
+    marker.title = errorInfo.message;
+    inputEditor.setGutterMarker(errorLine, 'CodeMirror-lint-markers', marker);
+    
+    // Scroll to error line
+    inputEditor.scrollIntoView({line: errorLine, ch: 0}, 100);
+}
+
+// Clear error markers
+function clearErrorMarkers(editor) {
+    for (let i = 0; i < editor.lineCount(); i++) {
+        editor.removeLineClass(i, 'background', 'error-line');
+        editor.setGutterMarker(i, 'CodeMirror-lint-markers', null);
+    }
+}
+
+    // Toggle convert dropdown
+    function toggleConvertDropdown(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('convert-dropdown');
+        const isShowing = dropdown.classList.contains('show');
+        
+        // Close all dropdowns first
+        document.querySelectorAll('.convert-dropdown.show, .view-dropdown.show').forEach(el => {
+            if (el !== dropdown) el.classList.remove('show');
+        });
+        
+        // Toggle the clicked dropdown
+        if (!isShowing) {
+            dropdown.classList.add('show');
+            // Close when clicking outside
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target) && e.target.id !== 'convert-json') {
+                    dropdown.classList.remove('show');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            // Add a small delay to avoid immediate closing
+            setTimeout(() => {
+                document.addEventListener('click', closeDropdown);
+            }, 10);
+        } else {
+            dropdown.classList.remove('show');
         }
     }
 
-    // Toggle Convert Dropdown
-    function toggleConvertDropdown() {
-        const dropdown = document.getElementById('convert-dropdown');
-        dropdown.classList.toggle('show');
-        
-        // Close the dropdown when clicking outside
-        document.addEventListener('click', function closeDropdown(e) {
-            if (!e.target.matches('#convert-json')) {
-                dropdown.classList.remove('show');
-                document.removeEventListener('click', closeDropdown);
-            }
-        });
-    }
-    
     // Handle conversion format selection
     document.querySelectorAll('#convert-dropdown a').forEach(item => {
         item.addEventListener('click', (e) => {
