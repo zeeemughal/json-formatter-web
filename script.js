@@ -22,9 +22,21 @@ document.addEventListener('DOMContentLoaded', function() {
     outputJsonHost.className = 'jsoneditor-host';
     outputWrapper.appendChild(outputJsonHost);
 
+    // Create CodeMirror hosts (hidden initially)
+    const inputCodeMirrorHost = document.createElement('textarea');
+    inputCodeMirrorHost.className = 'codemirror-host';
+    inputCodeMirrorHost.style.display = 'none';
+    inputWrapper.appendChild(inputCodeMirrorHost);
+    
+    const outputCodeMirrorHost = document.createElement('textarea');
+    outputCodeMirrorHost.className = 'codemirror-host';
+    outputCodeMirrorHost.style.display = 'none';
+    outputWrapper.appendChild(outputCodeMirrorHost);
+
     const inputJE = new JSONEditor(inputJsonHost, {
         mode: 'code',
         history: true,
+        theme: isDarkMode ? 'ace/theme/monokai' : 'ace/theme/textmate',
         onEvent: function(node, event) {
             if (event.type === 'change') {
                 localStorage.setItem('json-input', getJEText(inputJE));
@@ -35,12 +47,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const outputJE = new JSONEditor(outputJsonHost, {
         mode: 'code',
         history: true,
+        theme: isDarkMode ? 'ace/theme/monokai' : 'ace/theme/textmate',
         onEvent: function(node, event) {
             if (event.type === 'change') {
                 localStorage.setItem('json-output', getJEText(outputJE));
             }
         }
     });
+
+    // Create CodeMirror instances
+    const inputCM = CodeMirror.fromTextArea(inputCodeMirrorHost, {
+        lineNumbers: true,
+        mode: 'javascript',
+        theme: isDarkMode ? 'material-darker' : 'default',
+        readOnly: false
+    });
+
+    const outputCM = CodeMirror.fromTextArea(outputCodeMirrorHost, {
+        lineNumbers: true,
+        mode: 'xml',
+        theme: isDarkMode ? 'material-darker' : 'default',
+        readOnly: false
+    });
+
+    let currentInputMode = 'json'; // Track current input mode
+    let currentOutputMode = 'json'; // Track current output mode
 
     // Sample JSON used by the Sample button
     const sampleJson = {
@@ -57,6 +88,37 @@ document.addEventListener('DOMContentLoaded', function() {
     function getJEText(je) { try { return je.getText(); } catch { try { return JSON.stringify(je.get()); } catch { return ''; } } }
     function setJEText(je, text) { try { je.setText(text); } catch { try { je.set(JSON.parse(text)); } catch { /* ignore */ } } }
     function getJEJson(je) { try { return je.get(); } catch { try { return JSON.parse(getJEText(je)); } catch { return null; } } }
+
+    // Switch between JSONEditor and CodeMirror
+    function switchInputEditor(mode, content = '') {
+        if (mode === 'json') {
+            inputJsonHost.style.display = 'block';
+            inputCM.getWrapperElement().style.display = 'none';
+            if (content) setJEText(inputJE, content);
+            currentInputMode = 'json';
+        } else {
+            inputJsonHost.style.display = 'none';
+            inputCM.getWrapperElement().style.display = 'block';
+            inputCM.setOption('mode', mode);
+            if (content) inputCM.setValue(content);
+            currentInputMode = mode;
+        }
+    }
+
+    function switchOutputEditor(mode, content = '') {
+        if (mode === 'json') {
+            outputJsonHost.style.display = 'block';
+            outputCM.getWrapperElement().style.display = 'none';
+            if (content) setJEText(outputJE, content);
+            currentOutputMode = 'json';
+        } else {
+            outputJsonHost.style.display = 'none';
+            outputCM.getWrapperElement().style.display = 'block';
+            outputCM.setOption('mode', mode);
+            if (content) outputCM.setValue(content);
+            currentOutputMode = mode;
+        }
+    }
 
     // Initialize editors
     setJEText(inputJE, initialInput);
@@ -81,7 +143,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         themeIcon.textContent = isDark ? '☀️' : '🌙';
         
-        // JSONEditor styles follow CSS variables; nothing to change
+        // Update JSONEditor themes
+        const theme = isDark ? 'ace/theme/monokai' : 'ace/theme/textmate';
+        inputJE.aceEditor.setTheme(theme);
+        outputJE.aceEditor.setTheme(theme);
+        
+        // Update CodeMirror themes
+        const cmTheme = isDark ? 'material-darker' : 'default';
+        inputCM.setOption('theme', cmTheme);
+        outputCM.setOption('theme', cmTheme);
         
         // Update control buttons styling if needed
         const controlButtons = document.querySelectorAll('.control-btn');
@@ -126,11 +196,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Undo & Copy & Sample
     undoInputBtn.addEventListener('click', () => inputJE.undo());
-    undoOutputBtn.addEventListener('click', () => outputJE.undo());
+    undoOutputBtn.addEventListener('click', () => {
+        if (currentOutputMode === 'json') {
+            outputJE.undo();
+        } else {
+            outputCM.undo();
+        }
+    });
     const copyInputBtn = document.getElementById('copy-input');
     const copyOutputBtn = document.getElementById('copy-output');
-    if (copyInputBtn) copyInputBtn.addEventListener('click', async () => { await navigator.clipboard.writeText(getJEText(inputJE)); showNotification('Copied input to clipboard', 'success'); });
-    if (copyOutputBtn) copyOutputBtn.addEventListener('click', async () => { await navigator.clipboard.writeText(getJEText(outputJE)); showNotification('Copied output to clipboard', 'success'); });
+    if (copyInputBtn) copyInputBtn.addEventListener('click', async () => { 
+        const content = currentInputMode === 'json' ? getJEText(inputJE) : inputCM.getValue();
+        await navigator.clipboard.writeText(content); 
+        showNotification('Copied input to clipboard', 'success'); 
+    });
+    if (copyOutputBtn) copyOutputBtn.addEventListener('click', async () => { 
+        const content = currentOutputMode === 'json' ? getJEText(outputJE) : outputCM.getValue();
+        await navigator.clipboard.writeText(content); 
+        showNotification('Copied output to clipboard', 'success'); 
+    });
     const sampleBtn = document.getElementById('sample-input');
     if (sampleBtn) sampleBtn.addEventListener('click', () => {
         setJEText(inputJE, sampleJsonStr);
@@ -138,8 +222,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Save buttons
-    saveInputBtn.addEventListener('click', () => saveToFile(getJEText(inputJE), 'input.json'));
-    saveOutputBtn.addEventListener('click', () => saveToFile(getJEText(outputJE), 'output.json'));
+    saveInputBtn.addEventListener('click', () => {
+        const content = currentInputMode === 'json' ? getJEText(inputJE) : inputCM.getValue();
+        const extension = currentInputMode === 'xml' ? '.xml' : currentInputMode === 'yaml' ? '.yaml' : '.json';
+        saveToFile(content, 'input' + extension);
+    });
+    saveOutputBtn.addEventListener('click', () => {
+        const content = currentOutputMode === 'json' ? getJEText(outputJE) : outputCM.getValue();
+        const extension = currentOutputMode === 'xml' ? '.xml' : currentOutputMode === 'yaml' ? '.yaml' : '.txt';
+        saveToFile(content, 'output' + extension);
+    });
     
     // View dropdown toggles
     viewInputBtn.addEventListener('click', (e) => {
@@ -195,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tabSize = tabSizeSelect.value === 'tab' ? '\t' : parseInt(tabSizeSelect.value);
             const formatted = JSON.stringify(parsed, null, tabSize);
             
-            setJEText(outputJE, formatted);
+            switchOutputEditor('json', formatted);
             showNotification('JSON formatted successfully!', 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -214,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const parsed = JSON.parse(input);
             const minified = JSON.stringify(parsed);
             
-            setJEText(outputJE, minified);
+            switchOutputEditor('json', minified);
             showNotification('JSON minified successfully!', 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -341,19 +433,21 @@ document.addEventListener('DOMContentLoaded', function() {
             switch(format) {
                 case 'xml':
                     converted = jsonToXml(parsed);
+                    switchOutputEditor('xml', converted);
                     break;
                 case 'yaml':
                     converted = jsonToYaml(parsed);
+                    switchOutputEditor('yaml', converted);
                     break;
                 case 'csv':
                     converted = jsonToCsv(parsed);
+                    switchOutputEditor('text/plain', converted);
                     break;
                 default:
                     showNotification(`Conversion to ${format} not supported`, 'error');
                     return;
             }
             
-            setJEText(outputJE, converted);
             showNotification(`JSON converted to ${format.toUpperCase()} successfully!`, 'success');
         } catch (error) {
             showNotification('Invalid JSON: ' + error.message, 'error');
@@ -542,16 +636,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Download JSON
     function downloadJson() {
         try {
-            const output = getJEText(outputJE).trim();
+            const output = currentOutputMode === 'json' ? getJEText(outputJE).trim() : outputCM.getValue().trim();
             if (!output) {
-                showNotification('No JSON to download', 'info');
+                showNotification('No content to download', 'info');
                 return;
             }
             
-            saveToFile(output, 'formatted.json');
-            showNotification('JSON downloaded successfully', 'success');
+            const extension = currentOutputMode === 'xml' ? '.xml' : currentOutputMode === 'yaml' ? '.yaml' : '.json';
+            saveToFile(output, 'formatted' + extension);
+            showNotification('File downloaded successfully', 'success');
         } catch (error) {
-            showNotification('Error downloading JSON: ' + error.message, 'error');
+            showNotification('Error downloading file: ' + error.message, 'error');
         }
     }
     
@@ -572,11 +667,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function changeView(pane, viewType) {
         const isInputPane = pane === 'input';
         const je = isInputPane ? inputJE : outputJE;
+        const currentMode = isInputPane ? currentInputMode : currentOutputMode;
+        
+        // Only work with JSONEditor views when in JSON mode
+        if (currentMode !== 'json') {
+            showNotification('View changes only available in JSON mode', 'info');
+            return;
+        }
+        
         const text = getJEText(je).trim();
         let data;
         try { data = JSON.parse(text); } catch { data = text; }
 
-        const modeMap = { text: 'text', code: 'code', object: 'tree', table: 'table' };
+        const modeMap = { text: 'text', code: 'code', object: 'table', table: 'tree' };
         const mode = modeMap[viewType];
         if (!mode) { showNotification(`View type '${viewType}' not supported`, 'error'); return; }
 
@@ -593,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            je.updateOptions({ mode });
+            je.setMode(mode);
             if (typeof data === 'string' && (mode === 'text' || mode === 'code')) {
                 setJEText(je, data);
             } else {

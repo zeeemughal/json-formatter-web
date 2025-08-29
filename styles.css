@@ -687,3 +687,45 @@ details summary:hover {
     from { opacity: 1; transform: translateY(0); }
     to { opacity: 0; transform: translateY(-20px); }
 }
+/* CodeMirror styling */
+.CodeMirror {
+    height: 100% !important;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.dark-theme .CodeMirror {
+    background: var(--editor-bg);
+    color: var(--text-color);
+}
+
+.codemirror-host {
+    display: none;
+}
+/* JSONEditor dark mode fix */
+.dark-theme .jsoneditor {
+    background-color: var(--editor-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark-theme .jsoneditor-menu {
+    background-color: var(--editor-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark-theme .ace-jsoneditor .ace_gutter {
+    background-color: var(--editor-bg) !important;
+    color: var(--text-color) !important;
+}
+
+.dark-theme .ace-jsoneditor {
+    background-color: var(--editor-bg) !important;
+    color: var(--text-color) !important;
+}
+
+/* Hide JSONEditor menu bar */
+.jsoneditor-menu {
+    display: none !important;
+}
